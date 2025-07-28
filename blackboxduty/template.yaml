@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SAM Template for BlackBoxDuty
+
+Parameters:
+  BlackBoxDutyTableName:
+    Type: String
+    Description: "Name of the DynamoDB table to create. This table will be used to store BlackBoxDuty metadata about processed SecurityHub and GuardDuty findings."
+    MinLength: 3
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z0-9_.-]+$"
+    ConstraintDescription: "Table name must be 3-255 characters, alphanumeric characters, underscores, hyphens, and periods."
+    Default: "BlackBoxDutyTable"
+  BlackBoxDutyS3BucketName:
+    Type: String
+    Description: "Name of the S3 bucket to create. This bucket will be used to store BlackBoxDuty artifacts, including SecurityHub and GuardDuty findings."
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: "^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$"
+    ConstraintDescription: "Bucket name must be 3-63 characters, lowercase letters, numbers, and hyphens."
+
+Resources:
+  BlackBoxDutyStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachine/blackboxduty.asl.json
+      DefinitionSubstitutions:
+        DDBTable: !Ref BlackBoxDutyTable
+        S3BucketName: !Ref BlackBoxDutyS3BucketName
+      Policies:
+        - AmazonGuardDutyReadOnlyAccess
+        - DynamoDBWritePolicy:
+            TableName: !Ref BlackBoxDutyTable
+        - S3CrudPolicy:
+            BucketName: !Ref BlackBoxDutyS3BucketName
+      Events:
+        SecurityHubGuardDutyEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - aws.securityhub
+              detail-type:
+                - "Security Hub Findings - Imported"
+              detail:
+                findings:
+                  ProductArn:
+                    - { "prefix": "arn:aws:securityhub:" }
+                  ProductName:
+                    - GuardDuty
+
+  BlackBoxDutyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref BlackBoxDutyTableName
+      AttributeDefinitions:
+        - AttributeName: EventID
+          AttributeType: S
+        - AttributeName: FindingHash
+          AttributeType: S
+        - AttributeName: Id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+        - AttributeName: EventID
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: FindingHashIndex
+          KeySchema:
+            - AttributeName: FindingHash
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      BillingMode: PAY_PER_REQUEST
+
+  BlackBoxDutyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BlackBoxDutyS3BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  BlackBoxDutyBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BlackBoxDutyS3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:ListBucket
+              - s3:GetBucketLocation
+              - s3:GetObjectVersion
+              - s3:GetLifecycleConfiguration
+            Resource:
+              - !Sub "arn:aws:s3:::${BlackBoxDutyS3BucketName}/*"
+              - !Sub "arn:aws:s3:::${BlackBoxDutyS3BucketName}"
+          - Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub "arn:aws:s3:::${BlackBoxDutyS3BucketName}/*"
+              - !Sub "arn:aws:s3:::${BlackBoxDutyS3BucketName}"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+          - Effect: Deny
+            Principal: "*"
+            Action:
+              - s3:PutObject
+            Resource: !Sub "arn:aws:s3:::${BlackBoxDutyS3BucketName}/*"
+            Condition:
+              StringEquals:
+                s3:x-amz-server-side-encryption-customer-algorithm: AES256
+
+Outputs:
+  BlackBoxDutyStateMachineArn:
+    Description: "BlackBoxDuty State machine ARN"
+    Value: !Ref BlackBoxDutyStateMachine
+  BlackBoxDutyS3BucketArn:
+    Description: "BlackBoxDuty S3 bucket ARN"
+    Value: !GetAtt BlackBoxDutyS3Bucket.Arn

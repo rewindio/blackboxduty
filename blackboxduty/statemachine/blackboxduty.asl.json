@@ -1,0 +1,254 @@
+{
+    "Comment": "The BlackBoxDuty state machine.",
+    "StartAt": "Is Workflow Status New?",
+    "States": {
+        "Is Workflow Status New?": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Next": "Extract",
+                    "Variable": "$.detail.findings[0].Workflow.Status",
+                    "StringMatches": "NEW"
+                }
+            ],
+            "Default": "Extract with Notes"
+        },
+        "Extract with Notes": {
+            "Type": "Pass",
+            "Assign": {
+                "eventId.$": "$.id",
+                "eventTime.$": "$.time",
+                "securityHubArn.$": "$.resources[0]",
+                "findingArn.$": "$.detail.findings[0].Id",
+                "findingType.$": "$.detail.findings[0].Types[0]",
+                "findingTitle.$": "$.detail.findings[0].Title",
+                "findingDescription.$": "$.detail.findings[0].Description",
+                "findingCreatedAt.$": "$.detail.findings[0].CreatedAt",
+                "findingStatus.$": "$.detail.findings[0].Workflow.Status",
+                "findingSeverity.$": "$.detail.findings[0].Severity.Label",
+                "findingNote.$": "$.detail.findings[0].Note",
+                "stringSplitSplitter": "/",
+                "detectorIdArrayGetItemIndex": 1,
+                "findingIdArrayGetItemIndex": 3,
+                "findingHashAlgorithm": "SHA-256"
+            },
+            "Next": "Generate Finding Hash"
+        },
+        "Generate Finding Hash": {
+            "Type": "Pass",
+            "Next": "Extract Success?",
+            "Parameters": {
+                "FindingHash.$": "States.Hash($.detail.findings[0].Id, $findingHashAlgorithm)"
+            },
+            "ResultPath": "$.Metadata"
+        },
+        "Extract": {
+            "Type": "Pass",
+            "Assign": {
+                "eventId.$": "$.id",
+                "eventTime.$": "$.time",
+                "securityHubArn.$": "$.resources[0]",
+                "findingArn.$": "$.detail.findings[0].Id",
+                "findingType.$": "$.detail.findings[0].Types[0]",
+                "findingTitle.$": "$.detail.findings[0].Title",
+                "findingDescription.$": "$.detail.findings[0].Description",
+                "findingCreatedAt.$": "$.detail.findings[0].CreatedAt",
+                "findingStatus.$": "$.detail.findings[0].Workflow.Status",
+                "findingSeverity.$": "$.detail.findings[0].Severity.Label",
+                "findingNote": {},
+                "stringSplitSplitter": "/",
+                "detectorIdArrayGetItemIndex": 1,
+                "findingIdArrayGetItemIndex": 3,
+                "findingHashAlgorithm": "SHA-256"
+            },
+            "Next": "Generate Finding Hash"
+        },
+        "Extract Success?": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Next": "Transform",
+                    "Variable": "$findingArn",
+                    "IsPresent": true
+                }
+            ],
+            "Default": "Extract Fail"
+        },
+        "Transform": {
+            "Type": "Pass",
+            "Parameters": {
+                "originalFindingId.$": "$.detail.findings[0].Id",
+                "detectorId.$": "States.ArrayGetItem(States.StringSplit($.detail.findings[0].Id, $stringSplitSplitter), 1)",
+                "findingId.$": "States.Array(States.ArrayGetItem(States.StringSplit($.detail.findings[0].Id, $stringSplitSplitter), 3))",
+                "baseURI.$": "States.Format('s3://{}/{}', '${S3BucketName}', $.Metadata.FindingHash)"
+            },
+            "Next": "Load",
+            "ResultPath": "$.Transform"
+        },
+        "Load": {
+            "Type": "Pass",
+            "Assign": {
+                "detectorId.$": "$.Transform.detectorId",
+                "findingId.$": "$.Transform.findingId",
+                "findingHash.$": "$.Metadata.FindingHash",
+                "baseURI.$": "$.Transform.baseURI"
+            },
+            "Next": "Filter"
+        },
+        "Filter": {
+            "Type": "Pass",
+            "InputPath": "$.detail",
+            "ResultPath": "$.Findings.SecurityHub",
+            "Next": "Is valid GuardDuty Finding?"
+        },
+        "Is valid GuardDuty Finding?": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Next": "GetFindings",
+                    "And": [
+                        {
+                            "Variable": "$detectorId",
+                            "IsString": true
+                        },
+                        {
+                            "Variable": "$findingId",
+                            "IsPresent": true
+                        }
+                    ]
+                }
+            ],
+            "Default": "Transform Fail"
+        },
+        "GetFindings": {
+            "Type": "Task",
+            "Parameters": {
+                "DetectorId.$": "$detectorId",
+                "FindingIds.$": "$findingId"
+            },
+            "Resource": "arn:aws:states:::aws-sdk:guardduty:getFindings",
+            "ResultPath": "$.Findings.GuardDuty",
+            "Next": "PutObject SecurityHub Finding"
+        },
+        "PutObject SecurityHub Finding": {
+            "Type": "Task",
+            "Parameters": {
+                "Body.$": "$.Findings.SecurityHub.findings[0]",
+                "Bucket": "${S3BucketName}",
+                "Key.$": "States.Format('{}/{}.json', $findingHash, $.id)",
+                "ContentType": "application/json"
+            },
+            "Resource": "arn:aws:states:::aws-sdk:s3:putObject",
+            "ResultPath": "$.S3PutObject.SecurityHub",
+            "Next": "PutObject GuardDuty Finding"
+        },
+        "PutObject GuardDuty Finding": {
+            "Type": "Task",
+            "Parameters": {
+                "Body.$": "$.Findings.GuardDuty.Findings[0]",
+                "Bucket": "${S3BucketName}",
+                "Key.$": "States.Format('{}/{}.json', $findingHash, $.Findings.GuardDuty.Findings[0].Id)",
+                "ContentType": "application/json"
+            },
+            "Resource": "arn:aws:states:::aws-sdk:s3:putObject",
+            "ResultPath": "$.S3PutObject.GuardDuty",
+            "Next": "Prepare DynamoDB Item"
+        },
+        "Prepare DynamoDB Item": {
+            "Type": "Pass",
+            "Next": "DynamoDB PutItem",
+            "ResultPath": "$.DBItem",
+            "Parameters": {
+                "Id": {
+                    "S.$": "$securityHubArn"
+                },
+                "EventID": {
+                    "S.$": "$eventId"
+                },
+                "FindingHash": {
+                    "S.$": "$findingHash"
+                },
+                "SecurityHubObjVersionId": {
+                    "S.$": "$.S3PutObject.SecurityHub.VersionId"
+                },
+                "SecurityHubObjETag": {
+                    "S.$": "$.S3PutObject.SecurityHub.ETag"
+                },
+                "SecurityHubObjURI": {
+                    "S.$": "States.Format('{}/{}.json', $baseURI, $.id)"
+                },
+                "GuardDutyObjVersionId": {
+                    "S.$": "$.S3PutObject.GuardDuty.VersionId"
+                },
+                "GuardDutyObjETag": {
+                    "S.$": "$.S3PutObject.GuardDuty.ETag"
+                },
+                "GuardDutyObjURI": {
+                    "S.$": "States.Format('{}/{}.json', $baseURI, $.Findings.GuardDuty.Findings[0].Id)"
+                },
+                "EventTime": {
+                    "S.$": "$eventTime"
+                },
+                "FindingType": {
+                    "S.$": "$findingType"
+                },
+                "FindingTitle": {
+                    "S.$": "$findingTitle"
+                },
+                "FindingDescription": {
+                    "S.$": "$findingDescription"
+                },
+                "FindingCreatedAt": {
+                    "S.$": "$findingCreatedAt"
+                },
+                "FindingStatus": {
+                    "S.$": "$findingStatus"
+                },
+                "FindingSeverity": {
+                    "S.$": "$findingSeverity"
+                },
+                "FindingNote": {
+                    "M.$": "$findingNote"
+                },
+                "FindingArn": {
+                    "S.$": "$findingArn"
+                }
+            }
+        },
+        "DynamoDB PutItem": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:putItem",
+            "Parameters": {
+                "TableName": "${DDBTable}",
+                "Item.$": "$.DBItem"
+            },
+            "Next": "Workflow Status?"
+        },
+        "Workflow Status?": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Next": "Workflow Success",
+                    "Variable": "$.SdkHttpMetadata.HttpStatusCode",
+                    "NumericEquals": 200
+                }
+            ],
+            "Default": "Workflow Fail"
+        },
+        "Workflow Fail": {
+            "Type": "Fail",
+            "Comment": "Finding details did not save correctly."
+        },
+        "Workflow Success": {
+            "Type": "Succeed"
+        },
+        "Transform Fail": {
+            "Type": "Fail",
+            "Comment": "Could not load GuardDuty detector and/or finding Id."
+        },
+        "Extract Fail": {
+            "Type": "Fail",
+            "Comment": "Could not load Finding ARN from Id field."
+        }
+    }
+}
