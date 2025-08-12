@@ -38,7 +38,7 @@
             "Type": "Pass",
             "Next": "Extract Success?",
             "Parameters": {
-                "FindingHash.$": "States.Hash($.detail.findings[0].Id, $findingHashAlgorithm)"
+                "FindingHash.$": "States.Hash($securityHubArn, $findingHashAlgorithm)"
             },
             "ResultPath": "$.Metadata"
         },
