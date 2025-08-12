@@ -61,6 +61,8 @@ Resources:
           AttributeType: S
         - AttributeName: Id
           AttributeType: S
+        - AttributeName: EventTime
+          AttributeType: S
       KeySchema:
         - AttributeName: Id
           KeyType: HASH
@@ -70,6 +72,12 @@ Resources:
         - IndexName: FindingHashIndex
           KeySchema:
             - AttributeName: FindingHash
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: EventTimeIndex
+          KeySchema:
+            - AttributeName: EventTime
               KeyType: HASH
           Projection:
             ProjectionType: ALL
