@@ -5,6 +5,7 @@ BlackBoxDuty is a serverless application for orchestrating and managing AWS Secu
 Project structure:
 
 - `statemachine/` – State machine definition for workflow orchestration
+- `functions/` – Lambda function handlers for GuardDuty operations
 - `template.yaml` – AWS resource definitions
 - `samconfig.toml` – Deployment configuration for repeatable, automated deployments
 
@@ -52,12 +53,50 @@ You can customize these parameters in `template.yaml`:
 
 You will be prompted for these values during `sam deploy --guided`, or you can override them in `samconfig.toml`.
 
+## Lambda Functions
+
+BlackBoxDuty includes two AWS::Serverless::Function resources that handle GuardDuty operations:
+
+### GuardDuty Get Findings Function
+- **Purpose**: Retrieves detailed GuardDuty findings with multi-region support
+- **Handler**: `functions/guardduty-get-findings/app.lambda_handler`
+- **Runtime**: Python 3.13
+- **Permissions**: AmazonGuardDutyReadOnlyAccess
+- **Parameters**:
+  - `DetectorId`: GuardDuty detector ID
+  - `FindingRegion`: AWS region where the finding is located
+  - `FindingIds`: List of finding IDs to retrieve
+
+### GuardDuty List Detectors Function
+- **Purpose**: Lists GuardDuty detectors with multi-region support
+- **Handler**: `functions/guardduty-list-detectors/app.lambda_handler`
+- **Runtime**: Python 3.13
+- **Permissions**: AmazonGuardDutyReadOnlyAccess
+- **Parameters**:
+  - `FindingRegion`: AWS region where the finding is located
+
 ## Cleanup
 
 To remove the deployed application, run:
 
 ```bash
 sam delete --stack-name "BlackBoxDuty"
+```
+
+## Tests
+
+The `AWS::Serverless::Function` resources have unit test coverage (pytest), executable adjacent to the Lambda function handler definition.
+
+To run tests for the GuardDuty Get Findings function:
+```bash
+cd functions/guardduty-get-findings
+python -m pytest test_app.py -v
+```
+
+To run tests for the GuardDuty List Detectors function:
+```bash
+cd functions/guardduty-list-detectors
+python -m pytest test_app.py -v
 ```
 
 ## Resources
