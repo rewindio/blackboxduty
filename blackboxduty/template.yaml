@@ -28,12 +28,17 @@ Resources:
       DefinitionSubstitutions:
         DDBTable: !Ref BlackBoxDutyTable
         S3BucketName: !Ref BlackBoxDutyS3BucketName
+        GuardDutyGetFindingsFunctionArn: !GetAtt BlackBoxDutyGuardDutyGetFindingsFunction.Arn
+        GuardDutyListDetectorsFunctionArn: !GetAtt BlackBoxDutyGuardDutyListDetectorsFunction.Arn
       Policies:
-        - AmazonGuardDutyReadOnlyAccess
         - DynamoDBWritePolicy:
             TableName: !Ref BlackBoxDutyTable
         - S3CrudPolicy:
             BucketName: !Ref BlackBoxDutyS3BucketName
+        - LambdaInvokePolicy:
+            FunctionName: !Ref BlackBoxDutyGuardDutyGetFindingsFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref BlackBoxDutyGuardDutyListDetectorsFunction
       Events:
         SecurityHubGuardDutyEvent:
           Type: EventBridgeRule
@@ -49,6 +54,24 @@ Resources:
                     - { "prefix": "arn:aws:securityhub:" }
                   ProductName:
                     - GuardDuty
+
+  BlackBoxDutyGuardDutyGetFindingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/guardduty-get-findings
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+        - AmazonGuardDutyReadOnlyAccess
+
+  BlackBoxDutyGuardDutyListDetectorsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/guardduty-list-detectors
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+        - AmazonGuardDutyReadOnlyAccess
 
   BlackBoxDutyTable:
     Type: AWS::DynamoDB::Table
@@ -142,3 +165,6 @@ Outputs:
   BlackBoxDutyS3BucketArn:
     Description: "BlackBoxDuty S3 bucket ARN"
     Value: !GetAtt BlackBoxDutyS3Bucket.Arn
+  BlackBoxDutyTableArn:
+    Description: "BlackBoxDuty DynamoDB table ARN"
+    Value: !GetAtt BlackBoxDutyTable.Arn

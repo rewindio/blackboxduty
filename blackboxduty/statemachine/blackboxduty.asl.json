@@ -20,6 +20,7 @@
                 "eventTime.$": "$.time",
                 "securityHubArn.$": "$.resources[0]",
                 "findingArn.$": "$.detail.findings[0].Id",
+                "findingRegion.$": "$.detail.findings[0].Region",
                 "findingType.$": "$.detail.findings[0].Types[0]",
                 "findingTitle.$": "$.detail.findings[0].Title",
                 "findingDescription.$": "$.detail.findings[0].Description",
@@ -36,11 +37,30 @@
         },
         "Generate Finding Hash": {
             "Type": "Pass",
-            "Next": "Extract Success?",
+            "Next": "GuardDuty ListDetectors",
             "Parameters": {
                 "FindingHash.$": "States.Hash($securityHubArn, $findingHashAlgorithm)"
             },
             "ResultPath": "$.Metadata"
+        },
+        "GuardDuty ListDetectors": {
+            "Type": "Task",
+            "Resource": "${GuardDutyListDetectorsFunctionArn}",
+            "Parameters": {
+                "FindingRegion.$": "$findingRegion"
+            },
+            "ResultPath": "$.Metadata.GuardDuty",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.TaskFailed"
+                    ],
+                    "IntervalSeconds": 15,
+                    "MaxAttempts": 5,
+                    "BackoffRate": 1.5
+                }
+            ],
+            "Next": "Extract Success?"
         },
         "Extract": {
             "Type": "Pass",
@@ -49,6 +69,7 @@
                 "eventTime.$": "$.time",
                 "securityHubArn.$": "$.resources[0]",
                 "findingArn.$": "$.detail.findings[0].Id",
+                "findingRegion.$": "$.detail.findings[0].Region",
                 "findingType.$": "$.detail.findings[0].Types[0]",
                 "findingTitle.$": "$.detail.findings[0].Title",
                 "findingDescription.$": "$.detail.findings[0].Description",
@@ -78,7 +99,7 @@
             "Type": "Pass",
             "Parameters": {
                 "originalFindingId.$": "$.detail.findings[0].Id",
-                "detectorId.$": "States.ArrayGetItem(States.StringSplit($.detail.findings[0].Id, $stringSplitSplitter), 1)",
+                "detectorId.$": "$.Metadata.GuardDuty.DetectorIds[0]",
                 "findingId.$": "States.Array(States.ArrayGetItem(States.StringSplit($.detail.findings[0].Id, $stringSplitSplitter), 3))",
                 "baseURI.$": "States.Format('s3://{}/{}', '${S3BucketName}', $.Metadata.FindingHash)"
             },
@@ -105,7 +126,7 @@
             "Type": "Choice",
             "Choices": [
                 {
-                    "Next": "GetFindings",
+                    "Next": "GuardDuty GetFindings",
                     "And": [
                         {
                             "Variable": "$detectorId",
@@ -120,14 +141,25 @@
             ],
             "Default": "Transform Fail"
         },
-        "GetFindings": {
+        "GuardDuty GetFindings": {
             "Type": "Task",
+            "Resource": "${GuardDutyGetFindingsFunctionArn}",
             "Parameters": {
                 "DetectorId.$": "$detectorId",
-                "FindingIds.$": "$findingId"
+                "FindingIds.$": "$findingId",
+                "FindingRegion.$": "$findingRegion"
             },
-            "Resource": "arn:aws:states:::aws-sdk:guardduty:getFindings",
             "ResultPath": "$.Findings.GuardDuty",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.TaskFailed"
+                    ],
+                    "IntervalSeconds": 15,
+                    "MaxAttempts": 5,
+                    "BackoffRate": 1.5
+                }
+            ],
             "Next": "PutObject SecurityHub Finding"
         },
         "PutObject SecurityHub Finding": {
