@@ -218,6 +218,9 @@
                 "GuardDutyObjURI": {
                     "S.$": "States.Format('{}/{}.json', $baseURI, $.Findings.GuardDuty.Findings[0].Id)"
                 },
+                "GuardDutyObj": {
+                    "S.$": "States.JsonToString($.Findings.GuardDuty.Findings[0])"
+                },
                 "EventTime": {
                     "S.$": "$eventTime"
                 },
