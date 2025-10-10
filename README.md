@@ -1,5 +1,3 @@
-⚠️ **This project is currently under development.** ⚠️
-
 # BlackBoxDuty: "Cloud flight recorder for GuardDuty"
 
 ## Overview
