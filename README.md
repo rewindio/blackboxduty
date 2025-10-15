@@ -44,7 +44,7 @@ SELECT * FROM "BlackBoxDutyTable" WHERE "Id" = 'arn:aws:securityhub:REGION::prod
 
 ## Supercharge Your Security Investigations with AWS MCP Servers
 
-Transform your BlackBoxDuty security investigations from manual SQL queries to intelligent, conversational analysis using [Amazon DynamoDB MCP Server](https://awslabs.github.io/mcp/servers/dynamodb-mcp-server). This powerful integration brings AI-assisted security analysis directly to your BlackBoxDuty findings, enabling faster incident response, deeper threat insights, and streamlined compliance reporting.
+Transform your BlackBoxDuty security investigations from manual SQL queries to intelligent, conversational analysis using [AWS API MCP Server](https://awslabs.github.io/mcp/servers/aws-api-mcp-server). This powerful integration brings AI-assisted security analysis directly to your BlackBoxDuty findings, enabling faster incident response, deeper threat insights, and streamlined compliance reporting.
 
 ### Why AWS MCP Servers Are a Game-Changer for Security Teams
 
@@ -70,18 +70,22 @@ Transform your BlackBoxDuty security investigations from manual SQL queries to i
 
 ### Setup
 
-1. Install and configure the DynamoDB MCP Server following the [official documentation](https://awslabs.github.io/mcp/servers/dynamodb-mcp-server)
+1. Install and configure the AWS API MCP Server following the [official documentation](https://awslabs.github.io/mcp/servers/aws-api-mcp-server)
 2. Configure your GenAI Client - such as Claude Desktop - Developer settings for **Local MCP servers**
 3. Ensure your AWS credentials have read access to the DynamoDB table
 
 #### Claude Desktop Configuration Example
+
+> ⚠️ WARNING ⚠️
+> The [Amazon DynamoDB MCP Server](https://awslabs.github.io/mcp/servers/dynamodb-mcp-server) deprecated operational DynamoDB management (CRUD operations) activities.
+> For operational DynamoDB actions use the AWS API MCP Server.
 
 Add this configuration to your Claude Desktop MCP settings file (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
 ```json
 {
   "mcpServers": {
-    "awslabs.dynamodb-mcp-server": {
+    "awslabs.api-mcp-server": {
       "command": "docker",
       "args": [
         "run",
@@ -93,7 +97,7 @@ Add this configuration to your Claude Desktop MCP settings file (`~/Library/Appl
         "AWS_REGION=ca-central-1",
         "--volume",
         "/Users/<username>/.aws:/app/.aws",
-        "public.ecr.aws/awslabs-mcp/awslabs/dynamodb-mcp-server:latest"
+        "public.ecr.aws/awslabs-mcp/awslabs/aws-api-mcp-server:latest"
       ],
       "disabled": false,
       "autoApprove": []
@@ -105,6 +109,9 @@ Add this configuration to your Claude Desktop MCP settings file (`~/Library/Appl
 **Note:** Update the `AWS_PROFILE`, `AWS_REGION`, and volume path to match your local AWS configuration.
 
 ### Real-World Investigation Scenarios
+
+> ℹ️ Information ℹ️
+> The AWS API MCP Server requires context about data schema in order to function correctly. Provide [blackbox-table-schema.json](blackbox-table-schema.json) along the prompt in order for the BlackBoxDutyTable data to be properly queried.
 
 Transform complex security investigations with these example prompts:
 

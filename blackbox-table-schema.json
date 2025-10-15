@@ -1,0 +1,133 @@
+{
+  "tableName": "BlackBoxDutyTable",
+  "keySchema": [
+    {
+      "attributeName": "Id",
+      "keyType": "HASH"
+    },
+    {
+      "attributeName": "EventID",
+      "keyType": "RANGE"
+    }
+  ],
+  "attributeDefinitions": [
+    {
+      "attributeName": "Id",
+      "attributeType": "S",
+      "description": "Primary partition key - SecurityHub finding ARN"
+    },
+    {
+      "attributeName": "EventID",
+      "attributeType": "S",
+      "description": "Sort key - Unique event identifier"
+    },
+    {
+      "attributeName": "FindingHash",
+      "attributeType": "S",
+      "description": "Hash of the finding, groups related events"
+    },
+    {
+      "attributeName": "FindingArn",
+      "attributeType": "S",
+      "description": "GuardDuty finding ARN"
+    },
+    {
+      "attributeName": "FindingStatus",
+      "attributeType": "S",
+      "description": "Status: NEW, NOTIFIED, RESOLVED"
+    },
+    {
+      "attributeName": "FindingSeverity",
+      "attributeType": "S",
+      "description": "Severity: LOW, MEDIUM, HIGH, CRITICAL"
+    },
+    {
+      "attributeName": "FindingType",
+      "attributeType": "S",
+      "description": "Finding type pattern (e.g., TTPs/Impact:S3-AnomalousBehavior.Write)"
+    },
+    {
+      "attributeName": "FindingCreatedAt",
+      "attributeType": "S",
+      "description": "ISO timestamp when finding was created"
+    },
+    {
+      "attributeName": "EventTime",
+      "attributeType": "S",
+      "description": "ISO timestamp of the event"
+    },
+    {
+      "attributeName": "FindingTitle",
+      "attributeType": "S",
+      "description": "Human-readable finding title"
+    },
+    {
+      "attributeName": "FindingDescription",
+      "attributeType": "S",
+      "description": "Detailed finding description"
+    },
+    {
+      "attributeName": "GuardDutyObj",
+      "attributeType": "S",
+      "description": "JSON string containing full GuardDuty finding"
+    },
+    {
+      "attributeName": "GuardDutyObjURI",
+      "attributeType": "S",
+      "description": "S3 URI to GuardDuty object"
+    },
+    {
+      "attributeName": "GuardDutyObjETag",
+      "attributeType": "S",
+      "description": "S3 ETag for GuardDuty object"
+    },
+    {
+      "attributeName": "GuardDutyObjVersionId",
+      "attributeType": "S",
+      "description": "S3 version ID for GuardDuty object"
+    },
+    {
+      "attributeName": "SecurityHubObjURI",
+      "attributeType": "S",
+      "description": "S3 URI to SecurityHub object"
+    },
+    {
+      "attributeName": "SecurityHubObjETag",
+      "attributeType": "S",
+      "description": "S3 ETag for SecurityHub object"
+    },
+    {
+      "attributeName": "SecurityHubObjVersionId",
+      "attributeType": "S",
+      "description": "S3 version ID for SecurityHub object"
+    },
+    {
+      "attributeName": "FindingNote",
+      "attributeType": "M",
+      "description": "Map containing UpdatedBy, UpdatedAt, Text for incident notes"
+    }
+  ],
+  "commonQueryPatterns": [
+    {
+      "name": "GetFindingByArn",
+      "description": "Retrieve specific finding by SecurityHub ARN",
+      "keyCondition": "Id = :id"
+    },
+    {
+      "name": "GetFindingEvents",
+      "description": "Get all events for a specific finding",
+      "keyCondition": "Id = :id"
+    },
+    {
+      "name": "GetSpecificEvent",
+      "description": "Get a specific event",
+      "keyCondition": "Id = :id AND EventID = :eventId"
+    }
+  ],
+  "notes": [
+    "Multiple items can share the same Id (finding) but have different EventID (state changes)",
+    "FindingHash groups related finding events together",
+    "FindingNote can be an empty map or contain UpdatedBy, UpdatedAt, and Text",
+    "GuardDutyObj contains a JSON string with the complete finding details"
+  ]
+}
