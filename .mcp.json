@@ -1,5 +1,21 @@
 {
   "mcpServers": {
+    "awslabs.aws-documentation-mcp-server": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "--interactive",
+        "--env",
+        "FASTMCP_LOG_LEVEL=ERROR",
+        "--env",
+        "AWS_DOCUMENTATION_PARTITION=aws",
+        "public.ecr.aws/awslabs-mcp/awslabs/aws-documentation-mcp-server:latest"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
+    },
     "awslabs-cloudwatch-mcp-server": {
       "type": "stdio",
       "command": "docker",

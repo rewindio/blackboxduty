@@ -70,6 +70,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **[AWS Serverless plugin](https://claude.com/plugins/aws-serverless)** — provides SAM/CloudFormation-aware context for Claude. Install it once from the link; it is enabled project-wide via `.claude/settings.json`.
 - **[Code Review plugin](https://claude.com/plugins/code-review)** — use this to review all changes before opening a PR (see below). Install it once from the link; enabled project-wide via `.claude/settings.json`.
 - **CloudWatch MCP Server** — configured in `.mcp.json` (project root); auto-starts when Claude Code loads this project. Requires a `blackboxduty` AWS profile. See `blackboxduty/README.md` for setup.
+- **AWS Documentation MCP Server** — configured in `.mcp.json`; auto-starts alongside CloudWatch. No credentials required — fetches public AWS docs over HTTPS. Use this to look up current SAM resource schemas, Step Functions ASL intrinsic functions, and GuardDuty API reference inline.
 
 ## Local Development
 
