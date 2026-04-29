@@ -68,6 +68,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Recommended Tools
 
 - **[AWS Serverless plugin](https://claude.com/plugins/aws-serverless)** — provides SAM/CloudFormation-aware context for Claude. Install it once from the link; it is enabled project-wide via `.claude/settings.json`.
+- **[Code Review plugin](https://claude.com/plugins/code-review)** — use this to review all changes before opening a PR (see below). Install it once from the link; enabled project-wide via `.claude/settings.json`.
 - **CloudWatch MCP Server** — configured in `.mcp.json` (project root); auto-starts when Claude Code loads this project. Requires a `blackboxduty` AWS profile. See `blackboxduty/README.md` for setup.
 
 ## Local Development
@@ -77,10 +78,19 @@ No dedicated local execution framework beyond unit tests. To test the state mach
 2. Trigger via AWS Console or `aws stepfunctions start-execution`
 3. Monitor execution in Step Functions console
 
+## Before Opening a PR
+
+**Always run a code review using the [Code Review plugin](https://claude.com/plugins/code-review) before creating a pull request.**
+
+1. Ensure all changes are staged/committed on your branch
+2. Invoke the Code Review plugin and point it at the diff against `main`
+3. Address any issues surfaced before pushing
+
 ## Deployment Checklist
 
 - [ ] Ran `sam build --use-container` (Docker running)
 - [ ] Ran all unit tests: `python -m pytest blackboxduty/functions/*/test_app.py -v`
 - [ ] Updated `template.yaml` if adding/modifying resources
 - [ ] Updated `blackboxduty.asl.json` if adding/modifying state machine steps
+- [ ] Code review completed via Code Review plugin
 - [ ] Ran `sam deploy --guided` or `sam deploy` (uses `samconfig.toml`)
