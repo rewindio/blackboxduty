@@ -81,11 +81,12 @@ No dedicated local execution framework beyond unit tests. To test the state mach
 
 ## Before Opening a PR
 
-**Always run a code review using the [Code Review plugin](https://claude.com/plugins/code-review) before creating a pull request.**
+**Always run a code review using the [Code Review plugin](https://claude.com/plugins/code-review) before merging.**
 
-1. Ensure all changes are staged/committed on your branch
-2. Invoke the Code Review plugin and point it at the diff against `main`
-3. Address any issues surfaced before pushing
+1. Ensure all changes are committed on your branch
+2. Push the branch and create a PR: `gh pr create --title "..." --body "..."`
+3. Run the code review skill: `/code-review:code-review`
+4. Address any issues surfaced, then mark the PR ready for review: `gh pr ready <number>`
 
 ## Deployment Checklist
 
