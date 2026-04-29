@@ -65,6 +65,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Datetime serialization**: GuardDuty API returns datetime objects; Lambda serializes them to ISO 8601 strings in the JSON response (see `serialize_datetime` in `guardduty-get-findings/app.py`)
 - **Event filtering**: EventBridge filter only triggers on GuardDuty findings; non-GuardDuty SecurityHub events are silently ignored
 
+## Recommended Tools
+
+- **[AWS Serverless plugin](https://claude.com/plugins/aws-serverless)** — provides SAM/CloudFormation-aware context for Claude. Install it once from the link; it is enabled project-wide via `.claude/settings.json`.
+- **CloudWatch MCP Server** — configured in `.mcp.json` (project root); auto-starts when Claude Code loads this project. Requires a `blackboxduty` AWS profile. See `blackboxduty/README.md` for setup.
+
 ## Local Development
 
 No dedicated local execution framework beyond unit tests. To test the state machine end-to-end:
